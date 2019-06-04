@@ -14,6 +14,8 @@ public class ConsumerDemo implements LifecycleManager{
 
     private static Logger logger = LoggerFactory.getLogger(ConsumerDemo.class.getName());
     private KafkaConsumer<String, Tweet> Consumer;
+    private boolean isConsuming = false;
+    private Thread ConsumerThread;
 
     public void start() {
         // Criar as propriedades do consumidor
@@ -28,18 +30,25 @@ public class ConsumerDemo implements LifecycleManager{
         Consumer = new KafkaConsumer<String, Tweet>(properties);
         // Subscrever o consumidor para o nosso(s) tópico(s)
         Consumer.subscribe(Collections.singleton("twitter-topic"));
+        //set control variable
+        isConsuming = true;
 
         // Ler as mensagens
-        while (true) {  // Apenas como demo, usaremos um loop infinito
-            ConsumerRecords<String, Tweet> poll = Consumer.poll(Duration.ofMillis(10000));
-            for (ConsumerRecord record : poll) {
-                logger.info(record.topic() + " - " + record.partition() + " - " + record.value());
+        ConsumerThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while(isConsuming) {
+                    ConsumerRecords<String, Tweet> poll = Consumer.poll(Duration.ofMillis(10000));
+                    for (ConsumerRecord record : poll) {
+                        logger.info(record.topic() + " - " + record.partition() + " - " + record.value());
+                    }
+                }
             }
-        }
-
+        });
+        ConsumerThread.start();
     }
 
     public void stop() {
-
+        this.isConsuming = false;
     }
 }
